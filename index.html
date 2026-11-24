@@ -274,11 +274,12 @@ const G=9.81, $=id=>document.getElementById(id);
 const _v=new V3(),_v2=new V3(),_v3=new V3(),_q=new Q();
 
 /* ================= save ================= */
+const STARTER=['f5','f4']; // 처음에 무료로 주는 기체: 3세대 전투기(F-5E, F-4E)만. 5세대는 무료로 안 줘요
 const SAVE_KEY='skythunder-cc-save-v1'; // 같은 github.io 주소의 다른 게임 저장과 겹치지 않게 전용 이름을 써요
 const S=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY))}catch(e){}
-  return Object.assign({coins:0,matches:0,tut:false,owned:{f5:true},sel:'f5',paint:{},up:{},sens:5,crates:0,parts:{eng:0,arm:0,gun:0,msl:0},used:[]},s||{})})();
+  return Object.assign({coins:0,matches:0,tut:false,owned:Object.fromEntries(STARTER.map(id=>[id,true])),sel:'f5',paint:{},up:{},sens:5,crates:0,parts:{eng:0,arm:0,gun:0,msl:0},used:[]},s||{})})();
 S.parts=Object.assign({eng:0,arm:0,gun:0,msl:0},S.parts||{});S.used=S.used||[];S.crates=S.crates||0;
-S.owned=S.owned&&typeof S.owned==='object'?S.owned:{};S.owned.f5=true;
+S.owned=S.owned&&typeof S.owned==='object'?S.owned:{};for(const id of STARTER)S.owned[id]=true;
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
 const hangarLevel=()=>1+Math.floor(S.matches/10);
 const planeIndex=id=>PLANES.findIndex(p=>p.id===id);
