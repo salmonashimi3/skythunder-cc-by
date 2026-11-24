@@ -274,13 +274,16 @@ const G=9.81, $=id=>document.getElementById(id);
 const _v=new V3(),_v2=new V3(),_v3=new V3(),_q=new Q();
 
 /* ================= save ================= */
-const SAVE_KEY='tomcat-save-v2';
+const SAVE_KEY='skythunder-cc-save-v1'; // 같은 github.io 주소의 다른 게임 저장과 겹치지 않게 전용 이름을 써요
 const S=(()=>{let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY))}catch(e){}
   return Object.assign({coins:0,matches:0,tut:false,owned:{f5:true},sel:'f5',paint:{},up:{},sens:5,crates:0,parts:{eng:0,arm:0,gun:0,msl:0},used:[]},s||{})})();
 S.parts=Object.assign({eng:0,arm:0,gun:0,msl:0},S.parts||{});S.used=S.used||[];S.crates=S.crates||0;
+S.owned=S.owned&&typeof S.owned==='object'?S.owned:{};S.owned.f5=true;
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
 const hangarLevel=()=>1+Math.floor(S.matches/10);
 const planeIndex=id=>PLANES.findIndex(p=>p.id===id);
+// 저장된 기체가 지금 목록에 없으면 F-5E로 돌려놔요 (깨진 저장 때문에 격납고가 멈추지 않게)
+if(planeIndex(S.sel)<0){S.sel='f5';save()}
 const reqLevel=i=>i+1;              // plane #i opens at hangar level i+1 = every 10 matches
 const MAXUP=10;
 const UPS=[{k:'eng',n:'엔진',e:'추력 +3%/단계',part:'터빈 블레이드'},{k:'arm',n:'장갑',e:'체력 +5%/단계',part:'복합 장갑판'},{k:'gun',n:'기관포',e:'피해 +4%/단계',part:'강화 총열'},{k:'msl',n:'미사일',e:'락온 −4% · 사거리 +4%/단계',part:'적외선 탐색기'}];
