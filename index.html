@@ -110,7 +110,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .mpgrid{display:grid;gap:10px}.mpin{font-family:var(--f-ui);font-size:16px;background:rgba(0,0,0,.3);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:10px 12px;min-width:0}
 .teams{display:grid;grid-template-columns:1fr 1fr;gap:10px}.teams>div{border:1px solid var(--line);border-radius:6px;padding:10px;min-width:0}
 .teams ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px;font-size:13px}.teams li{display:flex;justify-content:space-between;gap:6px}.teams li span{color:var(--dim);font-size:11px}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.seg button[aria-checked="true"]{background:var(--amber);color:#1a1205;border-color:var(--amber)}
+.seg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.seg button{padding:8px 4px;white-space:nowrap}@media (max-width:420px){.seg{gap:4px}.seg button{font-size:12px;padding:8px 0}}.seg button[aria-checked="true"]{background:var(--amber);color:#1a1205;border-color:var(--amber)}
 #keysOv{z-index:8}
 .shop{max-height:calc(100vh - 32px);overflow:auto}
 .crate{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px;border:1px solid var(--amber);border-radius:6px;background:rgba(255,181,71,.07)}
@@ -138,6 +138,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
     <div class="lvl"><span class="hint">격납고</span><b class="num" id="hLvl">Lv 1</b><div><div class="prog"><i id="hProg"></i></div><div class="hint" id="hProgT">다음 레벨까지 0/10판</div></div></div>
     <button class="devbtn" id="btnMus">음악 끄기</button>
     <button class="devbtn" id="btnDev">조작: PC</button>
+    <button class="devbtn" id="btnSetH">설정</button>
     <button class="pass" id="btnShop">상점</button>
     <button class="pass" id="btnPass">개발자 패스</button>
     <div class="coins">전투기 코인 <b class="num" id="hCoins">0</b></div>
@@ -237,12 +238,17 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <div class="ov" id="pause" hidden><div class="sheet">
   <div class="hint">PAUSED</div><h2>일시정지</h2><p class="hint" style="margin:0">게임이 멈춰 있어요. 지금 나가면 이번 판 보상은 받지 못합니다.</p>
-  <div><div class="hint" style="margin-bottom:6px">그래픽 화질</div>
-    <div class="seg" role="radiogroup" aria-label="그래픽 화질"><button data-q="low" role="radio">낮음</button><button data-q="mid" role="radio">보통</button><button data-q="high" role="radio">높음</button></div>
-    <div class="hint" id="qInfo" style="margin-top:6px"></div></div>
   <div class="row"><label class="hint" for="sens2">조작 감도</label><input id="sens2" type="range" min="1" max="10" style="flex:1;accent-color:var(--amber)"><b class="num" id="sens2v">5</b></div>
   <div class="row"><label class="hint" for="vol">소리</label><input id="vol" type="range" min="0" max="10" style="flex:1;accent-color:var(--amber)"><b class="num" id="volv">6</b></div>
-  <div class="row"><button class="primary" id="btnResume">계속하기</button><button id="btnHelp">조작법</button><button id="btnQuit">격납고로 나가기</button></div>
+  <div class="row"><button class="primary" id="btnResume">계속하기</button><button id="btnHelp">조작법</button><button id="btnSet">설정</button><button id="btnQuit">격납고로 나가기</button></div>
+</div></div>
+
+<div class="ov" id="settings" hidden><div class="sheet">
+  <div class="hint">SETTINGS</div><h2>설정</h2>
+  <div><div class="hint" style="margin-bottom:6px">그래픽 모드</div>
+    <div class="seg" role="radiogroup" aria-label="그래픽 모드"><button data-q="auto" role="radio">자동</button><button data-q="low" role="radio">낮음</button><button data-q="mid" role="radio">보통</button><button data-q="high" role="radio">높음</button><button data-q="romance" role="radio">낭만모드</button></div>
+    <div class="hint" id="qInfo" style="margin-top:6px"></div></div>
+  <div class="row"><button class="primary" id="btnSetClose">닫기</button></div>
 </div></div>
 
 <div class="ov" id="result" hidden><div class="sheet">
@@ -351,6 +357,7 @@ function H0(x,z){const land=fbm(x/15000+3.1,z/15000-1.7,4)*1.25+.05;let h=land*7
   return h+m*r*r*r*2300+fbm(x/1100,z/1100,3)*70*m}
 const ground=(x,z)=>Math.max(H(x,z),0);
 function runwayAt(p){for(const b of BASES){if(Math.abs(p.x-b.x)<b.len/2+40&&Math.abs(p.z-b.z)<b.wid/2+30)return b}return null}
+let cloudMax=0;   // 화질 조절용 (아래 화질 조절 참고)
 {
   const MAP=64000,SEG=400,g=new THREE.PlaneGeometry(MAP,MAP,SEG,SEG);g.rotateX(-Math.PI/2);
   const p=g.attributes.position,col=new Float32Array(p.count*3);for(let i=0;i<p.count;i++)p.setY(i,H(p.getX(i),p.getZ(i)));
@@ -392,7 +399,7 @@ let cloudMesh=null;
     void main(){
     #include <logdepthbuf_fragment>
     vec4 t=texture2D(map,vUv);vec3 c=mix(vec3(.62,.67,.74),vec3(1.,.99,.96),smoothstep(.15,.85,vUv.y))*vS;c=mix(c,fogC,smoothstep(6000.,40000.,vF));gl_FragColor=vec4(c,t.a*vNear*.95);}`});
-  const cl=new THREE.Mesh(g,mat);cl.frustumCulled=false;cl.renderOrder=5;scene.add(cl);cloudMesh=cl;
+  const cl=new THREE.Mesh(g,mat);cl.frustumCulled=false;cl.renderOrder=5;scene.add(cl);cloudMesh=cl;cloudMax=N;
 }
 
 /* ================= air bases ================= */
@@ -816,6 +823,7 @@ addEventListener('keydown',e=>{if(e.target===chatIn)return;
   if(e.code==='KeyT'&&st.mode!=='hangar'&&!st.paused&&!st.over){e.preventDefault();openChat();return}
   keys[e.code]=true;
   if(['Space','Tab','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','F1','Enter'].includes(e.code)&&st.mode!=='hangar'&&e.target.tagName!=='INPUT')e.preventDefault();
+  if(e.code==='Escape'&&!$('settings').hidden){$('settings').hidden=true;return}
   if(e.code==='Escape'&&st.mode!=='hangar'&&!st.over){if(!$('keysOv').hidden){$('keysOv').hidden=true;return}if(st.paused){$('btnResume').click()}else if(!document.pointerLockElement)pauseGame(true);return}
   if(st.mode==='hangar'||st.paused)return;
   if(e.code==='KeyV'){st.view=st.view==='tp'?'ck':'tp';camera.near=st.view==='ck'?.03:.5;camera.fov=st.view==='ck'?78:68;camera.updateProjectionMatrix();if(st.tut)st.tut.views++}
@@ -862,13 +870,50 @@ document.addEventListener('pointerlockchange',()=>{if(!isMobile()&&!document.poi
 }
 function chooseDevice(d){S.device=d;save();$('devOv').hidden=true;applyDevice();renderHangar()}
 function applyDevice(){applyGfx();$('btnDev').textContent=isMobile()?'조작: 모바일':'조작: PC'}
-const GFX={low:{pr:.75,sh:false,cl:false,far:24000,t:'낮음: 그림자·구름 끔, 해상도 낮춤. 느린 기기용'},mid:{pr:1,sh:true,cl:true,far:34000,t:'보통: 그림자·구름 켬, 기본 해상도'},high:{pr:2,sh:true,cl:true,far:42000,t:'높음: 선명한 해상도와 먼 시야. 빠른 기기용'}};
-function applyGfx(){const q=S.gfx||(isMobile()?'low':'high'),g=GFX[q];renderer.setPixelRatio(Math.min(devicePixelRatio,q==='high'?1.5:g.pr));renderer.shadowMap.enabled=g.sh;
+/* ---- 화질 ----
+ * 자동(기본): 60fps를 목표로 프레임 간격을 재요. 느리면 한 단계 낮추고, 여유 있는 시간이 6초 쌓이면 한 단계 올려요.
+ * 낮음·보통·높음: 그 단계로 고정해요.
+ * 단계 값: pr 해상도 배율(기기 배율을 넘지 않고, 1.25배 밑으로는 내리지 않음) · sh 그림자(0이면 끔) · cl 구름 양 */
+const QL=[
+ {pr:2,   sh:2048,cl:1},
+ {pr:1.5, sh:2048,cl:1},
+ {pr:1.5, sh:2048,cl:.6},
+ {pr:1.5, sh:2048,cl:.3},
+ {pr:1.5, sh:2048,cl:.1},
+ {pr:1.25,sh:0,   cl:0}];
+const QPRESET={high:1,mid:2,low:5};
+const QROM={pr:0,sh:4096,cl:1};   // 낭만모드: pr 0이면 기기 배율을 2~3배로 (최고 선명도)
+const QINFO={auto:'자동 (추천): 60fps를 목표로 구름을 먼저 줄이고, 그래도 느리면 그림자를 끄고 해상도를 조금 낮춰요.',high:'높음: 선명한 화면에 그림자·구름을 모두 켜요. 느린 기기에서는 끊길 수 있어요.',mid:'보통: 구름을 조금 줄인 단계예요.',low:'낮음: 그림자와 구름을 끄고 해상도를 조금 낮춰요. 낮은 사양 기기용이에요.',romance:'낭만모드: 최고 화질이에요. 해상도를 최대(최소 2배)로 그리고 그림자를 4096으로 선명하게 그려요. 고사양 PC에서만 쓰세요.'};
+let qCur=-1,qAuto=true,qSlow=0,qGood=0,qChg=0,qWarm=0,qUpAt=-1e9,qCeil=0,qBan=0,qBanLen=9e4;
+const qStart=()=>isMobile()?3:1;   // 자동을 시작할 단계: 휴대폰은 조금 낮게, PC는 높게
+function applyLevel(i,now){
+  if(i===qCur)return;const L=i===-2?QROM:QL[i];qCur=i;qChg=now;qSlow=0;qGood=0;
+  renderer.setPixelRatio(L.pr?Math.min(devicePixelRatio,L.pr):Math.min(3,Math.max(2,devicePixelRatio)));
+  renderer.shadowMap.enabled=L.sh>0;
+  if(L.sh>0&&sun.shadow.mapSize.x!==L.sh){sun.shadow.mapSize.set(L.sh,L.sh);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}
+  if(cloudMesh){cloudMesh.visible=L.cl>0;cloudMesh.geometry.instanceCount=Math.round(cloudMax*L.cl)}
   scene.traverse(o=>{if(o.material&&o.material.needsUpdate!==undefined&&o.isMesh&&o.receiveShadow)o.material.needsUpdate=true});
-  if(cloudMesh)cloudMesh.visible=g.cl;scene.fog.far=g.far;resize();
-  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-checked',b.dataset.q===q));$('qInfo').textContent=g.t}
+  resize();
+}
+function qTick(now,ivl){   // 자동 모드에서만. 긴 끊김(탭 전환 등)과 시작·변경 직후(셰이더 컴파일)는 세지 않아요
+  if(!qAuto||qCur<0||ivl>1000||now-qWarm<2500||now-qChg<1200)return;
+  qSlow+=((ivl>22?1:0)-qSlow)*.06;                      // 느린 프레임 비율 (지수 이동 평균)
+  if(qCeil&&now>qBan)qCeil=0;
+  if(qSlow>.3&&qCur<QL.length-1){                      // 느리면 한 단계 낮춤
+    if(now-qUpAt<10000){qCeil=qCur+1;qBan=now+qBanLen;qBanLen=Math.min(qBanLen*2,3e5)}   // 올린 직후 다시 내려갔으면 그 단계는 잠시 다시 올리지 않아요 (실패할 때마다 두 배로, 최대 5분)
+    applyLevel(qCur+1,now);
+  }else if(qSlow<.03&&qCur>qCeil&&now>qBan){           // 여유 있는 시간이 6초 쌓이면 한 단계 올려봐요
+    qGood+=ivl;
+    if(qGood>6000){qUpAt=now;applyLevel(qCur-1,now)}
+  }
+}
+function applyGfx(){
+  const q=S.gfx||'auto',now=performance.now();qAuto=q==='auto';qCur=-1;
+  if(qAuto){qCeil=0;qBan=0;qBanLen=9e4;qUpAt=-1e9;qWarm=now;applyLevel(qStart(),now)}else if(q==='romance')applyLevel(-2,now);else applyLevel(QPRESET[q]??1,now);
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-checked',b.dataset.q===q));$('qInfo').textContent=QINFO[q]||QINFO.auto}
 document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{S.gfx=b.dataset.q;save();applyGfx()});
 $('btnHelp').onclick=()=>{$('keysOv').hidden=false};
+$('btnSet').onclick=()=>{$('settings').hidden=false};$('btnSetH').onclick=()=>{$('settings').hidden=false};$('btnSetClose').onclick=()=>{$('settings').hidden=true};
 const syncSliders=()=>{$('sens2').value=S.sens;$('sens2v').textContent=S.sens;const v=S.vol??6;$('vol').value=v;$('volv').textContent=v};
 $('sens2').oninput=()=>{S.sens=+$('sens2').value;$('sens2v').textContent=S.sens;$('sens').value=S.sens;$('sensv').textContent=S.sens;save()};
 $('vol').oninput=()=>{S.vol=+$('vol').value;$('volv').textContent=S.vol;sfx.volume(S.vol/10);save()};
@@ -1448,15 +1493,18 @@ $('mpStart').onclick=async()=>{const r=NET.lobby;if(!r||!NET.host)return;const p
   await NET.room.update({start:{bots},status:'playing',score:[0,0]})};
 
 /* ================= loop ================= */
-let lastFilter='';
+let lastFilter='',rafPrev=0,rafAvg=16.7;
 function gFilter(){const ge=st.mode==='hangar'?1:st.gEff;const gray=clamp((ge-7)/2,0,.85),dark=st.gloc>0?.95:clamp((ge-9)/3.5,0,.75);
   const f=gray>.01||dark>.01?`grayscale(${gray.toFixed(2)}) brightness(${(1-dark).toFixed(2)})`:'';if(f!==lastFilter){glc.style.filter=f;lastFilter=f}}
 function frame(now){
-  requestAnimationFrame(frame);$('portrait').hidden=!(isMobile()&&st.mode!=='hangar'&&innerHeight>innerWidth);const dt=Math.min((now-last)/1000,.05);last=now;
-  if(st.mode==='hangar'){if(lastFilter){glc.style.filter='';lastFilter=''}
+  requestAnimationFrame(frame);
+  const raw=now-rafPrev;rafPrev=now;if(raw>2&&raw<100)rafAvg+=(raw-rafAvg)*.05;
+  if(rafAvg<10&&now-last<13)return;   // 120Hz 이상 화면은 60fps까지만 그림 (배터리·발열 절약)
+  $('portrait').hidden=!(isMobile()&&st.mode!=='hangar'&&innerHeight>innerWidth);const ivl=now-last,dt=Math.min(ivl/1000,.05);last=now;
+  if(st.mode==='hangar'){qWarm=now;if(lastFilter){glc.style.filter='';lastFilter=''}
     if(hDrag==null)hYaw+=dt*.12;const r=hLen*1.75+9;hCam.position.set(Math.sin(hYaw)*r,hLen*.42+3,Math.cos(hYaw)*r);hCam.lookAt(0,hLen*.12,0);
     renderer.render(hScene,hCam);drawHUD();return}
-  pitG.visible=false;if(player){if(!st.paused||NET.on)update(dt);updateCamera(dt);gFilter();player.grp.visible=player.alive||player.dead>0}
+  pitG.visible=false;qTick(now,ivl);if(player){if(!st.paused||NET.on)update(dt);updateCamera(dt);gFilter();player.grp.visible=player.alive||player.dead>0}
   renderer.render(scene,camera);drawHUD();
 }
 resize();toHangar();if(!S.device){$('devOv').hidden=false;$('devMobile').classList.toggle('primary',matchMedia('(pointer:coarse)').matches);$('devPC').classList.toggle('primary',!matchMedia('(pointer:coarse)').matches)}else applyDevice();
@@ -1465,7 +1513,7 @@ const lobbyMusic=()=>{if(st.mode==='hangar'&&S.music!==false){sfx.init();sfx.res
 addEventListener('pointerdown',lobbyMusic);addEventListener('keydown',lobbyMusic);
 $('btnMus').textContent=S.music===false?'음악 켜기':'음악 끄기';
 $('btnMus').onclick=()=>{S.music=S.music===false;save();$('btnMus').textContent=S.music===false?'음악 켜기':'음악 끄기';if(S.music===false)sfx.music(false);else lobbyMusic()};requestAnimationFrame(frame);
-window.__game={getModel,withLoading,NET,H,hModel:()=>hModel,st,S,units:()=>units,player:()=>player,update,THREE,aimDir,startMatch,startTutorial,toHangar,save};
+window.__game={getModel,withLoading,NET,H,hModel:()=>hModel,st,S,units:()=>units,player:()=>player,update,THREE,aimDir,startMatch,startTutorial,toHangar,save,quality:()=>({lvl:qCur,auto:qAuto,slow:+qSlow.toFixed(3),pr:renderer.getPixelRatio(),frameMs:+rafAvg.toFixed(2)})};
 </script>
 
 </body>
